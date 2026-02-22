@@ -1,6 +1,6 @@
 
 xxHash - Extremely fast hash algorithm
-======================================
+====================================== 
 
 xxHash is an Extremely fast Hash algorithm, processing at RAM speed limits.
 Code is highly portable, and produces hashes identical across all platforms (little / big endian).
