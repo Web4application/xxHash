@@ -1,0 +1,209 @@
+XXH3-128 Short Input Implementation (0-240 bytes)
+
+/*
+ * Cryptol implementation of XXH3-128 short input branching (0-240 bytes).
+ * Based on the official xxHash3 specification.
+ */
+
+module XXH3_128_Short where
+
+// --- Constants (Primes) ---
+PRIME32_1 = 0x9E3779B1 : [32]
+PRIME32_2 = 0x85EBCA77 : [32]
+PRIME32_3 = 0xC2B2AE3D : [32]
+
+PRIME64_1 = 0x9E3779B185EBCA87 : [64]
+PRIME64_2 = 0xC2B2AE3D27D4EB4F : [64]
+PRIME64_3 = 0x165667B19E3779F9 : [64]
+PRIME64_4 = 0x85EBCA77C2B2AE63 : [64]
+PRIME64_5 = 0x27D4EB2F165667C5 : [64]
+
+PRIME_MX1 = 0x165667919E3779F9 : [64]
+
+PRIME_MX2 = 0x9FB21C651E98DF25 : [64]
+
+// --- Helper Functions ---
+
+/** 
+ * Avalanche effect for XXH3 64-bit values.
+ */
+avalanche : [64] -> [64]
+avalanche x = x3
+    where
+        x1 = x ^ (x >> 37)
+        x2 = x1 * PRIME_MX1
+        x3 = x2 ^ (x2 >> 32)
+
+/**
+ * Avalanche effect using XXH64 constants.
+ */
+avalanche_XXH64 : [64] -> [64]
+avalanche_XXH64 x = x5
+
+    where
+        x1 = x ^ (x >> 33)
+        x2 = x1 * PRIME64_2
+        x3 = x2 ^ (x2 >> 29)
+        x4 = x3 * PRIME64_3
+        x5 = x4 ^ (x4 >> 32)
+
+/**
+ * 64-bit Little Endian Read from a byte array.
+ */
+read64LE : {n} (fin n, n >= 8) => [n][8] -> [64]
+read64LE bytes = join (reverse (take`{8} bytes))
+
+/**
+ * 32-bit Little Endian Read.
+ */
+read32LE : {n} (fin n, n >= 4) => [n][8] -> [32]
+read32LE bytes = join (reverse (take`{4} bytes))
+
+
+// --- Core Mixing (mul & fold) ---
+
+/**
+ * XXH3_mixStep: The 128-bit multiplication-and-fold engine.
+ * (64x64 -> 128-bit mul, then fold high/low via XOR).
+ */
+mixStep : [128] -> [128] -> [64] -> [64]
+mixStep data secret seed = high ^ low
+    where
+        [d0, d1] = split data : [2][64]
+        [s0, s1] = split secret : [2][64]
+        // product is 128 bits
+        product = (zext (d0 ^ (s0 + seed))) * (zext (d1 ^ (s1 - seed)))
+        [high, low] = split product : [2][64]
+
+// --- Small Input Branches (0-16 bytes) ---
+
+/**
+ * Case: 0 bytes (Empty)
+
+ */
+xxh3_128_empty : [192][8] -> [64] -> [128]
+xxh3_128_empty secret seed = join [avalanche_XXH64 (seed ^ s0 ^ s1), avalanche_XXH64 (seed ^ s2 ^ s3)]
+    where
+        // Uses secret[64:96]
+        s0 = read64LE (drop`{64} secret)
+        s1 = read64LE (drop`{72} secret)
+        s2 = read64LE (drop`{80} secret)
+        s3 = read64LE (drop`{88} secret)
+
+/**
+ * Case: 1-3 bytes
+ */
+xxh3_128_1to3 : {L} (fin L, L >= 1, L <= 3) => [L][8] -> [192][8] -> [64] -> [128]
+xxh3_128_1to3 input secret seed = join [avalanche_XXH64 low, avalanche_XXH64 high]
+    where
+        c1 = zext (input @ 0) << 16
+        c2 = zext (input @ (L-1))
+        c3 = zext (L : [8]) << 8
+
+        c4 = zext (input @ (L >> 1)) << 24
+        combined = c1 | c2 | c3 | c4 : [32]
+        
+        sw0 = read32LE (drop`{0} secret)
+        sw1 = read32LE (drop`{4} secret)
+        sw2 = read32LE (drop`{8} secret)
+        sw3 = read32LE (drop`{12} secret)
+        
+        low = (zext (sw0 ^ sw1) + seed) ^ (zext combined)
+        high = (zext (sw2 ^ sw3) - seed) ^ (zext ((combined <<< 13) : [32]))
+
+/**
+ * Case: 4-8 bytes
+ */
+xxh3_128_4to8 : {L} (fin L, L >= 4, L <= 8) => [L][8] -> [192][8] -> [64] -> [128]
+xxh3_128_4to8 input secret seed = join [lowFinal, avalanche high]
+    where
+        inputFirst = read32LE input
+        inputLast = read32LE (drop`{L-4} input)
+
+        combined = zext inputFirst | (zext inputLast << 32)
+        
+        mSeed = seed ^ (zext (reverse (split seed : [2][32]) @ 1) << 32)
+        
+        s0 = read64LE (drop`{16} secret)
+        s1 = read64LE (drop`{24} secret)
+        
+        val = (s0 ^ s1 + mSeed) ^ combined
+        mulResult = (zext val) * (zext (PRIME64_1 + (zext L << 2)))
+        [high, low] = split mulResult : [2][64]
+        
+        h1 = high + (low << 1)
+        l1 = low ^ (h1 >> 3)
+        l2 = l1 ^ (l1 >> 35)
+        l3 = l2 * PRIME_MX2
+        lowFinal = l3 ^ (l3 >> 28)
+
+// --- Medium Input Branches (17-240 bytes) ---
+
+/**
+
+ * Range: 17-128 bytes
+ */
+xxh3_128_17to128 : {L} (fin L, L >= 17, L <= 128) => [L][8] -> [192][8] -> [64] -> [128]
+xxh3_128_17to128 input secret seed = extractResult accL accH L seed
+    where
+        numRounds = ((L - 1) >> 5) + 1
+        accInit = [zext L * PRIME64_1, 0]
+        
+        // Iterative update over pairs of 16-byte chunks from start and end
+        [accL, accH] = foldl update [accInit] [0 .. numRounds-1]
+        
+        update acc i = 
+            let offsetStart = i * 16
+                offsetEnd = L - i * 16 - 16
+                d1 = take`{16} (drop`{offsetStart} input)
+                d2 = take`{16} (drop`{offsetEnd} input)
+                sOff = i * 32
+            in mixTwoChunks acc d1 d2 secret sOff seed
+
+/**
+
+ * Range: 129-240 bytes
+ */
+xxh3_128_129to240 : {L} (fin L, L >= 129, L <= 240) => [L][8] -> [192][8] -> [64] -> [128]
+xxh3_128_129to240 input secret seed = extractResult accFinalL accFinalH L seed
+    where
+        accInit = [zext L * PRIME64_1, 0]
+        // First 128 bytes (4 rounds of 32 bytes)
+        acc1 = foldl (\a i -> mixTwoChunks a (take`{16} (drop`{i*32} input)) (take`{16} (drop`{i*32+16} input)) secret (i*32) seed) accInit [0..3]
+        
+        // Intermediate Avalanche
+        accAva = [avalanche (acc1 @ 0), avalanche (acc1 @ 1)]
+        
+        // Remaining full chunks
+        numChunks = L >> 5
+        acc2 = foldl (\a i -> mixTwoChunks a (take`{16} (drop`{i*32} input)) (take`{16} (drop`{i*32+16} input)) secret ((i-4)*32 + 3) seed) accAva [4..numChunks-1]
+        
+        // Last 32 bytes
+        accFinal = mixTwoChunks acc2 (take`{16} (drop`{L-16} input)) (take`{16} (drop`{L-32} input)) secret 103 (0 - seed)
+        [accFinalL, accFinalH] = accFinal
+
+
+// --- Shared Logic for Medium Inputs ---
+
+mixTwoChunks : [2][64] -> [16][8] -> [16][8] -> [192][8] -> Integer -> [64] -> [2][64]
+mixTwoChunks [acc0, acc1] d1 d2 secret sOff seed = [acc0', acc1']
+    where
+        d1w = [read64LE d1, read64LE (drop`{8} d1)]
+        d2w = [read64LE d2, read64LE (drop`{8} d2)]
+        
+        // Mix chunk 1 into acc0, chunk 2 into acc1
+        step1 = mixStep (join d1w) (join [read64LE (drop`{sOff} secret), read64LE (drop`{sOff+8} secret)]) seed
+        step2 = mixStep (join d2w) (join [read64LE (drop`{sOff+16} secret), read64LE (drop`{sOff+24} secret)]) seed
+        
+        // Cross-mixing
+        acc0' = acc0 + step1 ^ (d2w @ 0 + d2w @ 1)
+        acc1' = acc1 + step2 ^ (d1w @ 0 + d1w @ 1)
+
+extractResult : [64] -> [64] -> Integer -> [64] -> [128]
+extractResult acc0 acc1 inputLen seed = join [avalanche low, 0 - avalanche high]
+    where
+
+        low = acc0 + acc1
+        high = (acc0 * PRIME64_1) + (acc1 * PRIME64_4) + ((zext inputLen - seed) * PRIME64_2)
+
+
