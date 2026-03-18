@@ -1,0 +1,23 @@
+module XXH3_128 where
+
+// XXH3-128 uses the same 512-bit internal state (8 x 64-bit accumulators)
+// The key difference is the double-finalization to produce 128 bits.
+
+/**
+ * Finalizes the 8 accumulators into a 128-bit hash.
+ * XXH3-128 runs the merging procedure twice using different 
+ * segments of the secret.
+ */
+XXH3_128_finalize : [8][64] -> [128]
+XXH3_128_finalize accs = low64 # high64
+  where
+    // The 64-bit result is actually the lower half of the 128-bit result
+    low64  = XXH3_64_merge accs secret_low
+    high64 = XXH3_64_merge accs secret_high 
+
+// Helper: Standard XXH3-64 merge logic applied to different secret windows
+XXH3_64_merge : [8][64] -> [64][8] -> [64]
+XXH3_64_merge accs secret = avalanche (foldl mixing_step 0 (zip accs secret_blocks))
+  where
+    secret_blocks = split secret : [8][8][8]
+    mixing_step state (acc, s) = ... // Standard XXH3 mixing logic
