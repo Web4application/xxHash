@@ -1,0 +1,2 @@
+// Example of mixing a 16-byte chunk into an accumulator
+acc' = acc ^ XXH3_fold128 (XXH3_mix128 chunk (get_secret_at offset) seed)
