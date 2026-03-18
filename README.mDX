@@ -5,8 +5,8 @@ xxHash - Extremely fast hash algorithm
 xxHash is an Extremely fast Hash algorithm, processing at RAM speed limits.
 Code is highly portable, and produces hashes identical across all platforms (little / big endian).
 The library includes the following algorithms :
-- XXH32 : generates 32-bit hashes, using 32-bit arithmetic
-- XXH64 : generates 64-bit hashes, using 64-bit arithmetic
+:XXH32: generates 32-bit hashes, using 32-bit arithmetic
+:XXH64: generates 64-bit hashes, using 64-bit arithmetic
 - XXH3 (since `v0.8.0`): generates 64 or 128-bit hashes, using vectorized arithmetic.
   The 128-bit variant is called XXH128.
 
@@ -269,8 +269,3 @@ and `xxhsum` command line interface.
 [![Packaging status](https://repology.org/badge/vertical-allrepos/xxhash.svg)](https://repology.org/project/xxhash/versions)
 
 
-### Special Thanks
-
-- Takayuki Matsuoka, aka @t-mat, for creating `xxhsum -c` and great support during early xxh releases
-- Mathias Westerdahl, aka @JCash, for introducing the first version of `XXH64`
-- Devin Hussey, aka @easyaspi314, for incredible low-level optimizations on `XXH3` and `XXH128`
