@@ -1,0 +1,35 @@
+PS D:\projects\manifest-example> vcpkg install
+Detecting compiler hash for triplet x64-windows...
+The following packages will be built and installed:
+    cxxopts:x64-windows -> 3.1.1
+    fmt:x64-windows -> 10.0.0
+    range-v3:x64-windows -> 0.12.0#1
+  * vcpkg-cmake:x64-windows -> 2023-05-04
+  * vcpkg-cmake-config:x64-windows -> 2022-02-06#1
+Additional packages (*) will be modified to complete this operation.
+Installing 1/5 vcpkg-cmake-config:x64-windows...
+Installing 2/5 vcpkg-cmake:x64-windows...
+Installing 3/5 cxxopts:x64-windows...
+Installing 4/5 fmt:x64-windows...
+Installing 5/5 range-v3:x64-windows...
+Total install time: 48 s
+cxxopts provides CMake targets:
+
+    # this is heuristically generated, and may not be correct
+    find_package(cxxopts CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE cxxopts::cxxopts)
+
+The package fmt provides CMake targets:
+
+    find_package(fmt CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE fmt::fmt)
+
+    # Or use the header-only version
+    find_package(fmt CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE fmt::fmt-header-only)
+
+range-v3 provides CMake targets:
+
+    # this is heuristically generated, and may not be correct
+    find_package(range-v3 CONFIG REQUIRED)
+    target_link_libraries(main PRIVATE range-v3::meta range-v3::concepts range-v3::range-v3)
