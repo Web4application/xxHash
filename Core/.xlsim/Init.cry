@@ -1,0 +1,10 @@
+processInput_17to128 : {L} (fin L, L >= 17, L <= 128) => [L][8] -> [64] -> [192][8] -> [2][64]
+processInput_17to128 input seed secret = [final_acc0, final_acc1]
+  where
+    acc0 = `L * PRIME64_1
+    acc1 = 0
+    numRounds = ((`L - 1) >> 5) + 1
+    
+    // Processes paired 16-byte chunks from start and end
+    // Logic uses foldl to mixTwoChunks over the number of rounds
+    [final_acc0, final_acc1] = ... 
