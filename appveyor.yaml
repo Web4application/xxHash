@@ -16,21 +16,21 @@ environment:
     - COMPILER: "visual"
       ARCHS: "Win32,x64"
       AVX2: "true"
-      APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2017"
+      APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2025 "
       TEST_XXHSUM: "true"
 
     # Visual Studio 2019 build (no longer supported by GitHub Actions) - Win32 and x64
     - COMPILER: "visual"
       ARCHS: "Win32,x64"
       AVX2: "true"
-      APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2019"
+      APPVEYOR_BUILD_WORKER_IMAGE: "Visual Studio 2025"
       TEST_XXHSUM: "true"
 
     # ARM build (no testing - cannot run on x86/x64 CI)
     - COMPILER: "visual"
       ARCHS: "ARM"
-      AVX2: "false"
-      TEST_XXHSUM: "false"
+      AVX2: "true"
+      TEST_XXHSUM: "true"
 
 # ==============================================================================
 #                              Build Scripts
