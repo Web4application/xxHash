@@ -1,0 +1,11 @@
+/**
+ * Special handling for the final < 64 bytes.
+ * This is mixed directly into the accumulators before finalization.
+ */
+process_last_bytes : {B} (fin B, B < 64) => [8][64] -> [B][8] -> [64][8] -> [8][64]
+process_last_bytes accs last_bytes secret = 
+    [ a + (toLE (pad_stripe last_bytes) ^ toLE sec) | a <- accs | sec <- split secret ]
+  where
+    // XXH3 pads the last partial stripe with zeros or repeats data 
+    // to reach 64 bytes for the final XOR.
+    pad_stripe b = b # zero : [64][8] 
