@@ -1,0 +1,34 @@
+module xxh3 where
+
+import common::utils // Assume helper for toLE and 64-bit splits
+
+// XXH3-64 Initial Accumulators
+XXH3_INIT_ACC = [
+    PRIME32_3, PRIME64_1, PRIME64_2, PRIME64_3,
+    PRIME64_4, PRIME32_2, PRIME64_5, PRIME32_1
+] : [8][64]
+
+/**
+ * XXH3_accumulate: The core vectorized loop.
+ * It mixes 64 bytes of input with 64 bytes of the secret.
+ */
+XXH3_accumulate : [8][64] -> [64][8] -> [64][8] -> [8][64]
+XXH3_accumulate accs stripe secret =
+    [ acc + (lowerHalf mul ^ higherHalf mul)
+
+    | acc <- accs
+    | lane <- split (toLE stripe) : [8][64]
+    | s    <- split (toLE secret) : [8][64]
+
+    | let mul = (lane ^ s) * (lane >> 32 ^ s << 32) // Simplified 32x32->64 mixing
+    ]
+
+/**
+ * XXH3_scramble: Required every 1024 bytes (1 block).
+ */
+XXH3_scramble : [8][64] -> [64][8] -> [8][64]
+XXH3_scramble accs secret =
+    [ (acc ^ (acc >> 47)) * PRIME64_1 ^ s
+    | acc <- accs
+    | s   <- split (toLE secret) : [8][64]
+    ]
