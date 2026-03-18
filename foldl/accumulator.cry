@@ -1,0 +1,13 @@
+/**
+ * Merges the 8 accumulators into a 128-bit hash using the 11-byte shift.
+ */
+XXH3_128_finalize_long : [8][64] -> [192][8] -> [128]
+XXH3_128_finalize_long accs secret = low64 # high64
+  where
+    // Low 64 bits: Standard finalization window (usually starts at index 11)
+    low_secret  = take`{64} (drop`{11} secret)
+    low64       = XXH3_64_merge accs low_secret
+    
+    // High 64 bits: Shifted by another 11 bytes (starts at index 11 + 11 = 22)
+    high_secret = take`{64} (drop`{22} secret)
+    high64      = XXH3_64_merge accs high_secret
