@@ -1,0 +1,7 @@
+XXH3_128_finalize_long : [8][64] -> [64][8] -> [128]
+XXH3_128_finalize_long accs secret = 
+    (XXH3_avalanche high64) # (XXH3_avalanche low64)
+  where
+    // Merge the 8 accumulators twice with different secret windows
+    low64  = XXH3_64_merge accs (take`{64} (drop`{11} secret))
+    high64 = XXH3_64_merge accs (take`{64} (drop`{22} secret))
