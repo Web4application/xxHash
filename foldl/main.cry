@@ -1,0 +1,15 @@
+XXH3_128_long : {L} (fin L, L > 240) => [L][8] -> [192][8] -> [128]
+XXH3_128_long input secret = XXH3_128_finalize final_accs
+  where
+    // 1. Full 1024-byte blocks
+    num_blocks = `L / 1024
+    (full_blocks, remainder) = split input : ([num_blocks][1024][8], _)
+    accs_after_blocks = foldl process_block init_accs full_blocks
+
+    // 2. Full 64-byte stripes in the remainder
+    num_stripes = (length remainder) / 64
+    (tail_stripes, last_chunk) = split remainder : ([num_stripes][64][8], _)
+    accs_after_stripes = process_tail_stripes accs_after_blocks tail_stripes secret
+
+    // 3. Final partial stripe (if any)
+    final_accs = process_last_bytes accs_after_stripes last_chunk secret
