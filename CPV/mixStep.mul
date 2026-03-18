@@ -1,0 +1,5 @@
+mixStep(data[16], secretOffset, seed) = 
+    lowerHalf(mul) ^ higherHalf(mul)
+  where 
+    mul = (data[0:8] ^ (secret[offset:offset+8] + seed)) * 
+          (data[8:16] ^ (secret[offset+8:offset+16] - seed))
