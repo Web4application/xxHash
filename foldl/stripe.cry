@@ -1,0 +1,6 @@
+/**
+ * Processes any remaining full 64-byte stripes after the 1024-byte blocks.
+ */
+process_tail_stripes : {S} (fin S) => [8][64] -> [S][64][8] -> [64][8] -> [8][64]
+process_tail_stripes accs stripes secret = 
+    foldl (process_stripe secret) accs (enumerate stripes)
