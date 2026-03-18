@@ -1,0 +1,15 @@
+/**
+ * Processes a 16-byte chunk with 16 bytes of secret.
+ * Returns a 64-bit value to be XORed/added to an accumulator.
+ */
+mixStep : [16][8] -> [16][8] -> [64] -> [64]
+mixStep data chunkSecret seed = low ^ high
+  where
+    d0 = toLE (take`{8} data)
+    d1 = toLE (drop`{8} data)
+    s0 = toLE (take`{8} chunkSecret)
+    s1 = toLE (drop`{8} chunkSecret)
+    
+    // 64x64 -> 128-bit multiplication
+    product = (zext (d0 ^ (s0 + seed))) * (zext (d1 ^ (s1 - seed)))
+    [high, low] = split product : [2][64]
