@@ -1,5 +1,4 @@
 module xxhash where
-
 /**
  * The 32-bit variant of xxHash. The first argument is the sequence
  * of L bytes to hash. The second argument is a seed value.
