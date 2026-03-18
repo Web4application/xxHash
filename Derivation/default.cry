@@ -1,0 +1,6 @@
+/** 
+ * The default 192-byte secret for XXH3. 
+ * (Truncated here for brevity; use the full official 192-byte blob)
+ */
+DEFAULT_SECRET : [192][8]
+DEFAULT_SECRET = [ 0xbe, 0xd4, 0x6d, 0xe9, 0xbd, 0x39, 0x19, 0x23, ... ]
