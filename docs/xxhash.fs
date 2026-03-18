@@ -1,4 +1,4 @@
-module xxhash where 
+module xxhash where
 
 /**
  * The 32-bit variant of xxHash. The first argument is the sequence
