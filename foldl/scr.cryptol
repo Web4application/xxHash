@@ -1,0 +1,36 @@
+/** 
+ * Processes the 'long' input path.
+ * L is the total input length in bytes.
+ */
+XXH3_128_long : {L} (fin L, L > 240) => [L][8] -> [192][8] -> [128]
+XXH3_128_long input secret = XXH3_128_finalize final_accs
+  where
+    // 1. Initialize accumulators
+    init_accs = [ (`L:[64]) * PRIME64_1, PRIME64_2, PRIME64_3, PRIME64_4, 
+                  PRIME64_5, PRIME64_1, PRIME64_2, PRIME64_3 ]
+    
+    // 2. Divide input into 1024-byte blocks
+    blocks = split (input : [L/1024][1024][8])
+    
+    // 3. Fold over blocks (Accumulate 16 stripes, then Scramble)
+    final_accs = foldl process_block init_accs blocks
+
+    process_block accs block = XXH3_scramble scrambled_accs (drop`{128} secret)
+      where
+        stripes = split block : [16][64][8]
+        // Inner loop: process 16 stripes using sliding secret windows
+        scrambled_accs = foldl (process_stripe secret) accs (enumerate stripes)
+
+    // Inner step: Accumulate one 64-byte stripe
+    process_stripe secret accs (idx, stripe) = 
+        [ xxh3_mix_lane a s d | a <- accs | s <- split (get_secret_window secret idx) | d <- split stripe ]
+      where
+        xxh3_mix_lane acc sec dat = 
+            let combined = (toLE dat ^ toLE sec)
+                product  = (combined & 0xFFFFFFFF) * (combined >> 32)
+            in acc + product + (toLE dat)
+
+// Utility to grab the sliding 64-byte window (8-byte offset per stripe)
+get_secret_window : [192][8] -> [4] -> [64][8]
+get_secret_window secret idx = take`{64} (drop`{offset} secret)
+  where offset = (0 # idx) * 8
